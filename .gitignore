@@ -1,0 +1,41 @@
+# Dependencias
+node_modules/
+*/node_modules/
+
+# Base de datos local (NO subir a Git — en producción vive en Render)
+backend/data/
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+backend/pos_database.db*
+
+# Variables de entorno (contienen secretos)
+.env
+backend/.env
+frontend/.env.local
+
+# Builds
+frontend/dist/
+frontend/.vite/
+
+# Uploads de imágenes locales (en producción van al disco de Render)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/settings.json
+.idea/
+
+# Mobile (Expo)
+mobile/.expo/
+mobile/node_modules/
+mobile/dist/

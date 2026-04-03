@@ -1,0 +1,120 @@
+====================================================
+  SupermercadoPOS - Sistema de Punto de Venta
+  Para supermercado de barrio - Colombia
+====================================================
+
+REQUISITOS PREVIOS
+------------------
+- Node.js v18 o superior (descargar en nodejs.org)
+- Navegador Chrome, Firefox o Edge moderno
+
+INSTALACIÓN (primera vez)
+--------------------------
+1. Abre una terminal en esta carpeta
+2. En Mac/Linux ejecuta:   sh instalar.sh
+   En Windows ejecuta:     instalar.bat (doble clic)
+
+INICIAR EL SISTEMA
+------------------
+Necesitas 2 terminales abiertas:
+
+Terminal 1 (Backend):
+  cd backend
+  npm start
+
+Terminal 2 (Frontend):
+  cd frontend
+  npm run dev
+
+Luego abre en el navegador: http://localhost:3000
+
+USUARIOS POR DEFECTO
+--------------------
+  Gerente:  gerente@supermercado.com   contraseña: admin123
+  Cajero:   caja1@supermercado.com    contraseña: caja123
+
+FUNCIONES DISPONIBLES
+---------------------
+✅ Caja registradora (POS)
+   - Escaneo de códigos de barras
+   - Búsqueda por código personalizado
+   - Productos pesables (verduras/frutas con báscula)
+   - Cobro con efectivo, tarjeta y Nequi/Daviplata
+   - Cajón de efectivo (vía impresora ESC/POS)
+   - Cálculo automático de cambio
+   - Factura con número correlativo
+
+✅ Panel del Gerente (desde celular o computador)
+   - Dashboard con ventas del día en tiempo real
+   - Gestión de productos con códigos personalizados
+   - Alertas de stock bajo
+   - Actualización de precios
+
+✅ Inventario
+   - Ajuste de stock
+   - Movimientos de entrada/salida
+   - Alertas de productos agotados
+
+✅ Facturas de compra
+   - Registro de facturas de proveedores
+   - Actualización automática de stock al registrar
+   - Subida de fotos de facturas
+
+✅ Informes
+   - Ventas diarias (por hora, por método de pago)
+   - Ventas mensuales (por día, por categoría)
+   - Ventas anuales (por mes)
+   - Top productos
+
+✅ Chat IA
+   - Comandos en lenguaje natural
+   - Reconocimiento de voz (Chrome)
+   - Preparado para OpenAI (activar con API key)
+
+✅ Tiempo real
+   - Dos cajas sincronizadas en red local
+   - Cambios de precio visibles de inmediato
+
+CONECTAR HARDWARE
+-----------------
+Lector de códigos de barras:
+  → Simplemente conéctalo por USB. Funciona automáticamente
+     como si fuera un teclado. El cursor debe estar en el
+     campo de búsqueda de la caja.
+
+Báscula:
+  → Configura la báscula para enviar el peso por serial/USB.
+     En el POS, al escanear un producto pesable, se abre
+     el campo para ingresar el peso (manual o desde báscula).
+
+Cajón de efectivo:
+  → Normalmente se conecta a la impresora de recibos.
+     El comando ESC/POS está listo. Necesitas instalar
+     el driver de tu impresora y configurar el puerto en
+     el archivo backend/.env
+
+ACTIVAR IA COMPLETA (OpenAI)
+-----------------------------
+1. Crea una cuenta en platform.openai.com
+2. Genera una API key
+3. Abre el archivo backend/.env
+4. Agrega la línea: OPENAI_API_KEY=tu-clave-aqui
+5. Reinicia el backend
+
+Con IA completa podrás:
+  - Hablar para dictar precios y facturas
+  - Fotografiar facturas para importarlas automáticamente
+  - Comandos en lenguaje completamente natural
+
+DATOS Y RESPALDO
+----------------
+La base de datos se guarda en: backend/data/supermercado.db
+Copia este archivo regularmente para hacer respaldo.
+
+Para usar en la nube (múltiples sucursales):
+  Migra a PostgreSQL o usa Supabase (gratuito).
+  Consulta la documentación en docs/nube.md
+
+====================================================
+  Creado con SupermercadoPOS v1.0
+====================================================

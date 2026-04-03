@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: supermercado-pos
+    runtime: node
+    region: oregon
+    plan: starter          # $7/mes — siempre activo, sin cold starts
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_PATH
+        value: /data
+      - key: JWT_SECRET
+        generateValue: true   # Render genera uno seguro automáticamente
+      - key: ALLOWED_ORIGINS
+        sync: false           # Lo pones manualmente con tu dominio
+    disk:
+      name: pos-database
+      mountPath: /data
+      sizeGB: 1              # 1 GB = $0.25/mes — más que suficiente para SQLite
