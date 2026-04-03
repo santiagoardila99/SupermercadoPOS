@@ -1,9 +1,11 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useMobile } from './hooks/useMobile';
 import Login from './views/Login';
 import POSView from './views/POS';
 import ManagerLayout from './views/manager/Layout';
+import MobileLayout from './views/mobile/MobileLayout';
 import Dashboard from './views/manager/Dashboard';
 import Productos from './views/manager/Productos';
 import Inventario from './views/manager/Inventario';
@@ -24,12 +26,17 @@ function ProtectedRoute({ children, requireGerente = false }) {
 
 function AppRoutes() {
   const { user, isGerente } = useAuth();
+  const isMobile = useMobile();
+
+  // En móvil, el gerente ve el layout móvil; en desktop, el layout normal
+  const GerenteLayout = isMobile ? MobileLayout : ManagerLayout;
+
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={isGerente ? '/gerente' : '/pos'} replace /> : <Login />} />
       <Route path="/pos" element={<ProtectedRoute><POSView /></ProtectedRoute>} />
       <Route path="/ia" element={<ProtectedRoute><IAChat /></ProtectedRoute>} />
-      <Route path="/gerente" element={<ProtectedRoute requireGerente><ManagerLayout /></ProtectedRoute>}>
+      <Route path="/gerente" element={<ProtectedRoute requireGerente><GerenteLayout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="productos" element={<Productos />} />
         <Route path="inventario" element={<Inventario />} />

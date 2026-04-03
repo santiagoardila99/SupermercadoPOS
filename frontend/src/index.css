@@ -23,6 +23,97 @@
   .badge-info { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800; }
 }
 
+/* ── Mobile Layout ── */
+.mobile-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #f9fafb;
+  overflow: hidden;
+}
+
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 0.625rem) 1rem 0.625rem;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  min-height: calc(env(safe-area-inset-top) + 52px);
+}
+
+.mobile-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem;
+}
+
+.mobile-tabbar {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding-bottom: env(safe-area-inset-bottom);
+  flex-shrink: 0;
+}
+
+.mobile-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  transition: color 0.15s;
+  text-decoration: none;
+}
+
+.mobile-tab-active  { color: #2563eb; }
+.mobile-tab-inactive { color: #9ca3af; }
+
+.mobile-fab {
+  position: fixed;
+  right: 1.25rem;
+  bottom: calc(env(safe-area-inset-bottom) + 72px);
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.4);
+  z-index: 40;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.mobile-fab:active {
+  transform: scale(0.93);
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+}
+
+/* Evitar desbordamiento horizontal en móvil */
+.mobile-main > * { max-width: 100%; }
+.mobile-main table { font-size: 13px; min-width: unset; }
+.mobile-main .overflow-x-auto { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mobile-main img { max-width: 100%; height: auto; }
+
+/* Ajuste de grids en móvil */
+@media (max-width: 767px) {
+  .lg\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .lg\:grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .min-w-\[800px\], .min-w-\[700px\], .min-w-\[600px\] { min-width: unset !important; }
+}
+
 /* POS específico */
 .pos-key { @apply flex items-center justify-center bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-800 font-bold rounded-xl text-xl cursor-pointer transition-all duration-75 select-none; }
 .pos-key-action { @apply flex items-center justify-center bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl text-lg cursor-pointer transition-all duration-75 select-none; }
