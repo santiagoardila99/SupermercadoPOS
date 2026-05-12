@@ -1,0 +1,587 @@
+{
+  "name": "Control Financiero Personal - WhatsApp IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finanzas-whatsapp",
+        "responseMode": "onReceived",
+        "responseData": "",
+        "options": {}
+      },
+      "id": "node-01-webhook",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 400],
+      "webhookId": "finanzas-webhook-001"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-audio-check",
+              "leftValue": "={{ $json.body?.MediaContentType0 ?? $json.MediaContentType0 ?? '' }}",
+              "rightValue": "audio",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-02-if-audio",
+      "name": "¿Es Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Webhook WhatsApp').item.json.body?.MediaUrl0 ?? $('Webhook WhatsApp').item.json.MediaUrl0 }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "node-03-download-audio",
+      "name": "Descargar Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 200],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TWILIO_BASIC_AUTH_CRED_ID",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "es"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "node-04-whisper",
+      "name": "Transcribir Audio (Whisper)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "audio-texto",
+              "name": "texto_usuario",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "audio-telefono",
+              "name": "usuario_telefono",
+              "value": "={{ $('Webhook WhatsApp').item.json.body?.From ?? $('Webhook WhatsApp').item.json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "audio-fecha",
+              "name": "fecha_hoy",
+              "value": "={{ $now.toISO().split('T')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "audio-mes",
+              "name": "mes_actual",
+              "value": "={{ $now.toISO().substring(0, 7) }}",
+              "type": "string"
+            },
+            {
+              "id": "audio-fuente",
+              "name": "fuente_mensaje",
+              "value": "audio",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-05-set-audio",
+      "name": "Preparar Texto (Audio)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text-texto",
+              "name": "texto_usuario",
+              "value": "={{ $json.body?.Body ?? $json.Body }}",
+              "type": "string"
+            },
+            {
+              "id": "text-telefono",
+              "name": "usuario_telefono",
+              "value": "={{ $json.body?.From ?? $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "text-fecha",
+              "name": "fecha_hoy",
+              "value": "={{ $now.toISO().split('T')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "text-mes",
+              "name": "mes_actual",
+              "value": "={{ $now.toISO().substring(0, 7) }}",
+              "type": "string"
+            },
+            {
+              "id": "text-fuente",
+              "name": "fuente_mensaje",
+              "value": "texto",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-06-set-text",
+      "name": "Preparar Texto (WhatsApp)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CLAUDE_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 400,\n  \"system\": \"Eres un asistente financiero personal. Analiza mensajes en español colombiano con lenguaje natural.\\n\\nSi es un REGISTRO de gasto o ingreso, responde con este JSON exacto (sin texto adicional):\\n{\\\"es_consulta\\\": false, \\\"tipo\\\": \\\"gasto\\\" o \\\"ingreso\\\", \\\"categoria\\\": una de exactamente estas [comida, transporte, vivienda, salud, ocio, ropa, educacion, servicios, salario, otros], \\\"valor\\\": número entero en pesos colombianos (convierte: \\\"30 mil\\\"=30000, \\\"800 mil\\\"=800000, \\\"2 millones\\\"=2000000, \\\"medio millon\\\"=500000), \\\"descripcion\\\": frase muy corta descriptiva}\\n\\nSi es una CONSULTA sobre sus finanzas, responde con este JSON exacto (sin texto adicional):\\n{\\\"es_consulta\\\": true, \\\"tipo_consulta\\\": \\\"resumen_mes\\\" o \\\"cuanto_llevo\\\" o \\\"mayor_gasto\\\" o \\\"cuanto_queda\\\"}\\n\\nResponde ÚNICAMENTE con el JSON. Sin markdown, sin explicaciones, sin texto extra.\",\n  \"messages\": [{\"role\": \"user\", \"content\": \"{{ $json.texto_usuario }}\"}]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "node-07-claude",
+      "name": "Clasificar con Claude IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear la respuesta de Claude y enriquecer con datos del webhook\nconst claudeResponse = $input.first().json;\nconst rawContent = claudeResponse.content?.[0]?.text?.trim() ?? '';\n\n// Siempre disponible sin importar la ruta (audio o texto)\nconst webhookData = $('Webhook WhatsApp').first().json;\nconst usuarioTelefono = webhookData.body?.From ?? webhookData.From ?? '';\nconst fechaHoy = $now.toISO().split('T')[0];\nconst mesActual = $now.toISO().substring(0, 7);\n\nlet parsed;\ntry {\n  // Limpiar markdown si Claude lo envuelve con ```\n  const cleaned = rawContent\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No se encontró JSON en la respuesta de Claude');\n  }\n} catch (e) {\n  parsed = {\n    error: true,\n    mensaje_error: e.message\n  };\n}\n\nreturn [{\n  json: {\n    ...parsed,\n    usuario_telefono: usuarioTelefono,\n    fecha_hoy: fechaHoy,\n    mes_actual: mesActual\n  }\n}];"
+      },
+      "id": "node-08-parsear",
+      "name": "Parsear Respuesta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-consulta",
+              "leftValue": "={{ $json.es_consulta }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-09-if-consulta",
+      "name": "¿Es Consulta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "transacciones",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "mes",
+              "lookupValue": "={{ $('Parsear Respuesta IA').item.json.mes_actual }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-10-sheets-consulta",
+      "name": "Leer Mes (Consulta)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2000, 220],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular métricas del mes para responder CONSULTAS\nconst rows = $input.all();\nconst registroIA = $('Parsear Respuesta IA').first().json;\n\nlet totalGastos = 0;\nlet totalIngresos = 0;\nconst porCategoria = {};\n\nrows.forEach(item => {\n  const tipo = item.json.tipo;\n  const categoria = item.json.categoria;\n  const valor = parseFloat(item.json.valor) || 0;\n\n  if (tipo === 'gasto') {\n    totalGastos += valor;\n    porCategoria[categoria] = (porCategoria[categoria] || 0) + valor;\n  } else if (tipo === 'ingreso') {\n    totalIngresos += valor;\n  }\n});\n\nconst balance = totalIngresos - totalGastos;\nconst porcentajeGastado = totalIngresos > 0\n  ? parseFloat(((totalGastos / totalIngresos) * 100).toFixed(1))\n  : 0;\n\nconst categoriasSorted = Object.entries(porCategoria)\n  .sort((a, b) => b[1] - a[1]);\n\nconst hoy = new Date();\nconst diasEnMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();\nconst diasRestantes = diasEnMes - hoy.getDate();\nconst gastosDiarioRestante = (diasRestantes > 0 && balance > 0)\n  ? Math.round(balance / diasRestantes)\n  : 0;\n\nreturn [{\n  json: {\n    totalGastos,\n    totalIngresos,\n    balance,\n    porcentajeGastado,\n    categoriasSorted,\n    diasRestantes,\n    gastosDiarioRestante,\n    registroIA\n  }\n}];"
+      },
+      "id": "node-11-metricas-consulta",
+      "name": "Calcular Métricas (Consulta)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar mensaje de respuesta para CONSULTAS\nconst m = $input.first().json;\nconst r = m.registroIA;\n\nfunction fmt(n) {\n  return '$' + Math.abs(Math.round(n)).toLocaleString('es-CO');\n}\n\nfunction emoji(cat) {\n  const map = {\n    comida: '🍔', transporte: '🚗', vivienda: '🏠', salud: '💊',\n    ocio: '🎬', ropa: '👕', educacion: '📚', servicios: '💡',\n    salario: '💼', otros: '📦'\n  };\n  return map[cat?.toLowerCase()] || '📦';\n}\n\nlet msg = '';\n\nswitch (r.tipo_consulta) {\n  case 'resumen_mes':\n  case 'cuanto_llevo':\n    msg = `📊 *Resumen de este mes*\\n\\n`;\n    msg += `💰 Ingresos: ${fmt(m.totalIngresos)}\\n`;\n    msg += `💸 Gastos: ${fmt(m.totalGastos)}\\n`;\n    msg += `✅ Balance: ${fmt(m.balance)}\\n`;\n    msg += `📈 Llevas el ${m.porcentajeGastado}%\\n`;\n    if (m.categoriasSorted.length > 0) {\n      msg += `\\n📂 *Por categoría:*\\n`;\n      m.categoriasSorted.slice(0, 5).forEach(([cat, val]) => {\n        const pct = m.totalGastos > 0\n          ? ((val / m.totalGastos) * 100).toFixed(0)\n          : 0;\n        msg += `${emoji(cat)} ${cat}: ${fmt(val)} (${pct}%)\\n`;\n      });\n    }\n    msg += `\\n📅 Quedan ${m.diasRestantes} días`;\n    if (m.gastosDiarioRestante > 0) {\n      msg += `\\n💡 Puedes gastar ${fmt(m.gastosDiarioRestante)}/día`;\n    }\n    break;\n\n  case 'mayor_gasto':\n    msg = `🔍 *Mayor gasto este mes:*\\n\\n`;\n    if (m.categoriasSorted.length === 0) {\n      msg += `No hay gastos registrados este mes.`;\n    } else {\n      m.categoriasSorted.slice(0, 5).forEach(([cat, val], i) => {\n        msg += `${i + 1}. ${emoji(cat)} ${cat}: ${fmt(val)}\\n`;\n      });\n    }\n    break;\n\n  case 'cuanto_queda':\n    msg = `💼 *Te queda disponible:*\\n\\n`;\n    msg += `*${fmt(m.balance)}*\\n\\n`;\n    msg += `📅 Para ${m.diasRestantes} días restantes`;\n    if (m.gastosDiarioRestante > 0) {\n      msg += `\\n💡 ${fmt(m.gastosDiarioRestante)}/día`;\n    }\n    break;\n\n  default:\n    msg = `📊 *Balance actual:* ${fmt(m.balance)}\\n`;\n    msg += `Ingresos: ${fmt(m.totalIngresos)} | Gastos: ${fmt(m.totalGastos)}`;\n}\n\nreturn [{ json: { mensaje: msg, usuario_telefono: r.usuario_telefono } }];"
+      },
+      "id": "node-12-msg-consulta",
+      "name": "Generar Mensaje (Consulta)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.twilio.com/2010-04-01/Accounts/{{ $env.TWILIO_ACCOUNT_SID }}/Messages.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "From", "value": "={{ $env.TWILIO_WHATSAPP_FROM }}" },
+            { "name": "To",   "value": "={{ $json.usuario_telefono }}" },
+            { "name": "Body", "value": "={{ $json.mensaje }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-13-twilio-consulta",
+      "name": "Enviar WhatsApp (Consulta)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 220],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TWILIO_BASIC_AUTH_CRED_ID",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "transacciones",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "mes",
+              "lookupValue": "={{ $('Parsear Respuesta IA').item.json.mes_actual }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-14-sheets-registro",
+      "name": "Leer Mes (Registro)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2000, 580],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "transacciones",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id":          "={{ Date.now() }}",
+            "fecha":       "={{ $('Parsear Respuesta IA').item.json.fecha_hoy }}",
+            "tipo":        "={{ $('Parsear Respuesta IA').item.json.tipo }}",
+            "categoria":   "={{ $('Parsear Respuesta IA').item.json.categoria }}",
+            "valor":       "={{ $('Parsear Respuesta IA').item.json.valor }}",
+            "descripcion": "={{ $('Parsear Respuesta IA').item.json.descripcion ?? '' }}",
+            "mes":         "={{ $('Parsear Respuesta IA').item.json.mes_actual }}",
+            "fuente":      "whatsapp"
+          }
+        },
+        "options": {}
+      },
+      "id": "node-15-append",
+      "name": "Guardar Transacción",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2220, 580],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular métricas incluyendo el nuevo registro recién guardado\nconst rows = $('Leer Mes (Registro)').all();\nconst registroIA = $('Parsear Respuesta IA').first().json;\n\nlet totalGastos = 0;\nlet totalIngresos = 0;\nconst porCategoria = {};\n\n// Datos históricos del mes (antes del nuevo registro)\nrows.forEach(item => {\n  const tipo = item.json.tipo;\n  const categoria = item.json.categoria;\n  const valor = parseFloat(item.json.valor) || 0;\n\n  if (tipo === 'gasto') {\n    totalGastos += valor;\n    porCategoria[categoria] = (porCategoria[categoria] || 0) + valor;\n  } else if (tipo === 'ingreso') {\n    totalIngresos += valor;\n  }\n});\n\n// Sumar el nuevo registro (recién guardado en Sheets)\nconst nuevoValor = parseFloat(registroIA.valor) || 0;\nif (registroIA.tipo === 'gasto') {\n  totalGastos += nuevoValor;\n  porCategoria[registroIA.categoria] =\n    (porCategoria[registroIA.categoria] || 0) + nuevoValor;\n} else if (registroIA.tipo === 'ingreso') {\n  totalIngresos += nuevoValor;\n}\n\nconst balance = totalIngresos - totalGastos;\nconst porcentajeGastado = totalIngresos > 0\n  ? parseFloat(((totalGastos / totalIngresos) * 100).toFixed(1))\n  : 0;\n\nconst categoriasSorted = Object.entries(porCategoria)\n  .sort((a, b) => b[1] - a[1]);\n\nconst hoy = new Date();\nconst diasEnMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();\nconst diasRestantes = diasEnMes - hoy.getDate();\nconst gastosDiarioRestante = (diasRestantes > 0 && balance > 0)\n  ? Math.round(balance / diasRestantes)\n  : 0;\n\nreturn [{\n  json: {\n    totalGastos,\n    totalIngresos,\n    balance,\n    porcentajeGastado,\n    categoriasSorted,\n    diasRestantes,\n    gastosDiarioRestante,\n    registroIA\n  }\n}];"
+      },
+      "id": "node-16-metricas-registro",
+      "name": "Calcular Métricas (Registro)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 580]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar mensaje de confirmación para REGISTROS nuevos\nconst m = $input.first().json;\nconst r = m.registroIA;\n\nfunction fmt(n) {\n  return '$' + Math.abs(Math.round(n)).toLocaleString('es-CO');\n}\n\nfunction emoji(cat) {\n  const map = {\n    comida: '🍔', transporte: '🚗', vivienda: '🏠', salud: '💊',\n    ocio: '🎬', ropa: '👕', educacion: '📚', servicios: '💡',\n    salario: '💼', otros: '📦'\n  };\n  return map[cat?.toLowerCase()] || '📦';\n}\n\nlet msg = '';\n\nif (r.error) {\n  // Claude no pudo clasificar el mensaje\n  msg = `❌ No entendí tu mensaje.\\n\\n`;\n  msg += `Intenta así:\\n`;\n  msg += `• _\"gasté 30 mil en comida\"_\\n`;\n  msg += `• _\"pagué 800 mil de arriendo\"_\\n`;\n  msg += `• _\"recibí 2 millones de salario\"_\\n`;\n  msg += `• _\"¿cuánto llevo este mes?\"_`;\n} else {\n  const accionEmoji = r.tipo === 'gasto' ? '💸' : '💰';\n  const accion = r.tipo === 'gasto' ? 'Gasto registrado ✅' : 'Ingreso registrado ✅';\n\n  msg = `${accionEmoji} *${accion}*\\n`;\n  msg += `${emoji(r.categoria)} Categoría: *${r.categoria}*\\n`;\n  msg += `💵 Valor: *${fmt(r.valor)}*\\n`;\n  if (r.descripcion) msg += `📝 ${r.descripcion}\\n`;\n\n  msg += `\\n📊 *Resumen del mes:*\\n`;\n  msg += `💰 Ingresos: ${fmt(m.totalIngresos)}\\n`;\n  msg += `💸 Gastos: ${fmt(m.totalGastos)}\\n`;\n  msg += `✅ Balance: ${fmt(m.balance)}\\n`;\n  msg += `📈 Llevas el *${m.porcentajeGastado}%* del ingreso\\n`;\n\n  // Alertas según porcentaje gastado\n  if (m.porcentajeGastado > 100) {\n    msg += `\\n🚨 *Alerta:* Superaste los ingresos del mes`;\n  } else if (m.porcentajeGastado > 80) {\n    msg += `\\n⚠️ *Cuidado:* Llevas más del 80% gastado`;\n  } else if (m.porcentajeGastado > 60) {\n    msg += `\\n📌 Vigila los gastos`;\n  } else {\n    msg += `\\n💪 Vas muy bien este mes`;\n  }\n}\n\nreturn [{ json: { mensaje: msg, usuario_telefono: r.usuario_telefono } }];"
+      },
+      "id": "node-17-msg-registro",
+      "name": "Generar Mensaje (Registro)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 580]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.twilio.com/2010-04-01/Accounts/{{ $env.TWILIO_ACCOUNT_SID }}/Messages.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "From", "value": "={{ $env.TWILIO_WHATSAPP_FROM }}" },
+            { "name": "To",   "value": "={{ $json.usuario_telefono }}" },
+            { "name": "Body", "value": "={{ $json.mensaje }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-18-twilio-registro",
+      "name": "Enviar WhatsApp (Registro)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 580],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TWILIO_BASIC_AUTH_CRED_ID",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook WhatsApp": {
+      "main": [
+        [{ "node": "¿Es Audio?", "type": "main", "index": 0 }]
+      ]
+    },
+    "¿Es Audio?": {
+      "main": [
+        [{ "node": "Descargar Audio",             "type": "main", "index": 0 }],
+        [{ "node": "Preparar Texto (WhatsApp)",    "type": "main", "index": 0 }]
+      ]
+    },
+    "Descargar Audio": {
+      "main": [
+        [{ "node": "Transcribir Audio (Whisper)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transcribir Audio (Whisper)": {
+      "main": [
+        [{ "node": "Preparar Texto (Audio)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Preparar Texto (Audio)": {
+      "main": [
+        [{ "node": "Clasificar con Claude IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Preparar Texto (WhatsApp)": {
+      "main": [
+        [{ "node": "Clasificar con Claude IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Clasificar con Claude IA": {
+      "main": [
+        [{ "node": "Parsear Respuesta IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parsear Respuesta IA": {
+      "main": [
+        [{ "node": "¿Es Consulta?", "type": "main", "index": 0 }]
+      ]
+    },
+    "¿Es Consulta?": {
+      "main": [
+        [{ "node": "Leer Mes (Consulta)",  "type": "main", "index": 0 }],
+        [{ "node": "Leer Mes (Registro)",  "type": "main", "index": 0 }]
+      ]
+    },
+    "Leer Mes (Consulta)": {
+      "main": [
+        [{ "node": "Calcular Métricas (Consulta)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Calcular Métricas (Consulta)": {
+      "main": [
+        [{ "node": "Generar Mensaje (Consulta)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generar Mensaje (Consulta)": {
+      "main": [
+        [{ "node": "Enviar WhatsApp (Consulta)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Leer Mes (Registro)": {
+      "main": [
+        [{ "node": "Guardar Transacción", "type": "main", "index": 0 }]
+      ]
+    },
+    "Guardar Transacción": {
+      "main": [
+        [{ "node": "Calcular Métricas (Registro)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Calcular Métricas (Registro)": {
+      "main": [
+        [{ "node": "Generar Mensaje (Registro)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generar Mensaje (Registro)": {
+      "main": [
+        [{ "node": "Enviar WhatsApp (Registro)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "finanzas-bot-001"
+  },
+  "tags": [
+    { "name": "finanzas" },
+    { "name": "whatsapp" },
+    { "name": "ia" }
+  ]
+}
